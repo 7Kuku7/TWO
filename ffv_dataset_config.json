@@ -1,0 +1,20 @@
+{
+    "dataset_name": "FFV",
+    "description": "Front-Facing Views NeRF Quality Assessment Dataset with JOD scores",
+    "root_dir": "/media/abc/One Touch/NVS-SQA/benchmark_bank",
+    "score_type": "jod",
+    "score_range": {
+        "min": -20.0,
+        "max": 2.0,
+        "note": "JOD scores are typically negative, lower is worse quality"
+    },
+    "subsets": ["llff", "fieldwork", "lab"],
+    "llff_scenes": ["fern", "flower", "fortress", "horns", "leaves", "orchids", "room", "trex"],
+    "fieldwork_scenes": ["Bears", "Dinosaur", "Elephant", "Giraffe", "Leopards", "Naiad_statue", "Puccini_statue", "Vespa", "Whale"],
+    "lab_scenes": ["CD_occlusion_extr", "CD_occlusion_intr", "Glass", "Glossy_animals_extr", "Glossy_animals_intr", "Metal", "Toys"],
+    "methods": ["directvoxgo", "gnt_crossscene", "gnt_singlescene", "ibrnet_finetune", "ibrnet_pretrain", "light_field", "mipnerf", "nerf", "nex", "plenoxel"],
+    "frame_folder": "frames",
+    "frame_pattern": "frame*.jpg",
+    "labels_file": "flat_labels_offset_by_ref_scenewise_split_11.json",
+    "key_format": "{subset}+{scene}+{method}"
+}

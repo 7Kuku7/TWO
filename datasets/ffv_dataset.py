@@ -99,23 +99,41 @@ class FFVDataset(Dataset):
                 self.valid_samples.append(sample_path)
                 self.sample_keys.append(key)
         
-        # 计算JOD分数的归一化参数
+        # # 计算JOD分数的归一化参数
+        # all_jod_scores = list(self.all_labels.values())
+        # self.jod_min = min(all_jod_scores)
+        # self.jod_max = max(all_jod_scores)
+        
+        # print(f"[FFV-{subset}-{mode}] Loaded {len(self.valid_samples)} samples")
+        # print(f"  JOD range: [{self.jod_min:.2f}, {self.jod_max:.2f}]")
+        
+        # 计算JOD分数的归一化参数 (改为 Z-Score 标准化)
         all_jod_scores = list(self.all_labels.values())
-        self.jod_min = min(all_jod_scores)
-        self.jod_max = max(all_jod_scores)
+        self.jod_mean = np.mean(all_jod_scores)
+        self.jod_std = np.std(all_jod_scores)
         
         print(f"[FFV-{subset}-{mode}] Loaded {len(self.valid_samples)} samples")
-        print(f"  JOD range: [{self.jod_min:.2f}, {self.jod_max:.2f}]")
+        print(f"  JOD Mean: {self.jod_mean:.4f}, Std: {self.jod_std:.4f}")
+    
+    # def _normalize_jod_to_mos(self, jod_score):
+    #     """
+    #     将JOD分数归一化到[0, 1]范围
+    #     JOD分数越高质量越好，归一化后保持这个关系
+    #     """
+    #     # 线性归一化: (x - min) / (max - min)
+    #     normalized = (jod_score - self.jod_min) / (self.jod_max - self.jod_min + 1e-8)
+    #     return np.clip(normalized, 0, 1)
     
     def _normalize_jod_to_mos(self, jod_score):
-        """
-        将JOD分数归一化到[0, 1]范围
-        JOD分数越高质量越好，归一化后保持这个关系
-        """
-        # 线性归一化: (x - min) / (max - min)
-        normalized = (jod_score - self.jod_min) / (self.jod_max - self.jod_min + 1e-8)
-        return np.clip(normalized, 0, 1)
-    
+    """
+    将JOD分数进行标准化 (Z-Score)
+    JOD分数越高质量越好
+    """
+    # 标准化: (x - mean) / std
+    # 结果通常在 -3 到 +3 之间，这让模型更容易区分好坏
+    normalized = (jod_score - self.jod_mean) / (self.jod_std + 1e-8)
+    return normalized  # 不要 clip，保留真实分布
+
     def _grid_mini_patch_sampling(self, frames_tensor):
         """
         Grid Mini-Patch Sampling

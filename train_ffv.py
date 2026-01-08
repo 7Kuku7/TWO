@@ -130,13 +130,20 @@ class AdvancedFFVDatasetWithAug(AdvancedFFVDataset):
     pass  # 已在ffv_dataset.py中实现
 
 # --- Transforms ---
+# class MultiScaleCrop:
+#     def __init__(self, size=224): self.size = size
+#     def __call__(self, img):
+#         scale = int(np.random.choice([224, 256, 288]))
+#         img = T.Resize(scale)(img)
+#         img = T.RandomCrop(self.size)(img)
+#         return img
+
 class MultiScaleCrop:
     def __init__(self, size=224): self.size = size
     def __call__(self, img):
-        scale = int(np.random.choice([224, 256, 288]))
-        img = T.Resize(scale)(img)
-        img = T.RandomCrop(self.size)(img)
-        return img
+        # 强制缩放到 224x224，不裁剪！
+        # 这样保证模型能看到物体边缘和背景中的所有伪影
+        return T.Resize((self.size, self.size))(img)
 
 # ==========================================
 # 4. 分子集评估函数
@@ -428,7 +435,8 @@ def parse_args():
     parser.add_argument("--num_frames", type=int, default=8, help="每个视频采样的帧数")
     
     # 损失权重 (与原代码一致)
-    parser.add_argument("--lambda_rank", type=float, default=0.1)
+    # parser.add_argument("--lambda_rank", type=float, default=0.1)
+    parser.add_argument("--lambda_rank", type=float, default=0.5)
     parser.add_argument("--lambda_mi", type=float, default=0.1)
     parser.add_argument("--lambda_sub", type=float, default=0.5)
     parser.add_argument("--lambda_cont", type=float, default=0.1)

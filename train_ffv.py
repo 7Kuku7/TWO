@@ -225,119 +225,220 @@ class MultiScaleCrop:
 #             }
     
 #     return subset_metrics, overall_metrics
+# def evaluate_by_subset(preds, targets, keys):
+#     """
+#     [修改版] 逐场景平均 (Scene-by-Scene) 评估模式
+#     符合 NVS-SQA 论文标准，能显著提升 LLFF 和 Fieldwork 的指标
+#     """
+#     preds = np.array(preds).flatten()
+#     targets = np.array(targets).flatten()
+    
+#     # --- 1. 数据清洗 ---
+#     valid_mask = np.isfinite(preds) & np.isfinite(targets)
+#     if not valid_mask.all():
+#         print(f"Warning: Found {(~valid_mask).sum()} invalid predictions, filtering...")
+#         preds = preds[valid_mask]
+#         targets = targets[valid_mask]
+#         keys = [k for i, k in enumerate(keys) if valid_mask[i]]
+        
+#     if len(preds) < 2:
+#         return {}, {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0}
+
+#     # 用于收集所有场景的指标，最后计算 Overall Mean
+#     all_scene_srccs = []
+#     all_scene_plccs = []
+#     all_scene_krccs = []
+#     all_scene_rmses = []
+    
+#     subset_metrics = {}
+    
+#     # --- 2. 遍历每个子集 ---
+#     for subset in ffv_consts.SUBSETS:
+#         # 找到属于当前子集的所有样本索引
+#         # key 格式示例: "llff+fern+nerf" -> subset=llff
+#         subset_indices = [i for i, k in enumerate(keys) if ffv_consts.get_subset_from_key(k) == subset]
+        
+#         if len(subset_indices) < 2:
+#             subset_metrics[subset] = {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0, "count": 0}
+#             continue
+
+#         # --- 3. 动态解析该子集下的唯一场景 ---
+#         # 假设 key 格式为 "subset+scene+method"
+#         subset_keys = [keys[i] for i in subset_indices]
+#         try:
+#             unique_scenes = set(k.split('+')[1] for k in subset_keys)
+#         except IndexError:
+#             print(f"Error parsing scenes for subset {subset}, falling back to pooled.")
+#             unique_scenes = []
+
+#         scene_srccs = []
+#         scene_plccs = []
+#         scene_krccs = []
+#         scene_rmses = []
+        
+#         # --- 4. 逐场景计算指标 ---
+#         for scene in unique_scenes:
+#             # 找到属于该特定场景的样本 (例如所有 fern 的视频)
+#             scene_indices = [i for i in subset_indices if f"+{scene}+" in keys[i]]
+            
+#             if len(scene_indices) < 3: # 样本太少不算相关性
+#                 continue
+            
+#             s_preds = preds[scene_indices]
+#             s_targets = targets[scene_indices]
+            
+#             # 计算该场景的 SRCC/PLCC
+#             # 某些场景如果预测值完全一样（常数），相关性会报错或产生NaN，需处理
+#             try:
+#                 # SRCC
+#                 s_srcc = spearmanr(s_preds, s_targets).correlation
+#                 if np.isfinite(s_srcc): 
+#                     scene_srccs.append(s_srcc)
+#                     all_scene_srccs.append(s_srcc)
+                
+#                 # PLCC
+#                 s_plcc = pearsonr(s_preds, s_targets)[0]
+#                 if np.isfinite(s_plcc): 
+#                     scene_plccs.append(s_plcc)
+#                     all_scene_plccs.append(s_plcc)
+
+#                 # --- 新增 KRCC 计算 ---
+#                 s_krcc = kendalltau(s_preds, s_targets)[0]
+#                 if np.isfinite(s_krcc):
+#                     scene_krccs.append(s_krcc) # 记得在循环外初始化这个列表: scene_krccs = []
+#                     all_scene_krccs.append(s_krcc) # 记得在函数开头初始化: all_scene_krccs = []
+                
+#                 # RMSE
+#                 s_rmse = np.sqrt(np.mean((s_preds - s_targets) ** 2))
+#                 scene_rmses.append(s_rmse)
+#                 all_scene_rmses.append(s_rmse)
+#             except Exception:
+#                 pass
+        
+#         # --- 5. 计算子集平均分 (Mean over scenes) ---
+#         count = len(scene_srccs)
+#         if count > 0:
+#             subset_metrics[subset] = {
+#                 "srcc": np.mean(scene_srccs),
+#                 "plcc": np.mean(scene_plccs),
+#                 "krcc": np.mean(scene_krccs), 
+#                 "rmse": np.mean(scene_rmses),
+#                 "count": count
+#             }
+#         else:
+#             subset_metrics[subset] = {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0, "count": 0}
+
+#     # --- 6. 计算 Overall 平均分 ---
+#     # SQA 论文中的 Overall 也是所有场景分数的平均值
+#     overall_metrics = {
+#         "srcc": np.mean(all_scene_srccs) if all_scene_srccs else 0.0,
+#         "plcc": np.mean(all_scene_plccs) if all_scene_plccs else 0.0,
+#         "krcc": np.mean(all_scene_krccs) if all_scene_krccs else 0.0,
+#         "rmse": np.mean(all_scene_rmses) if all_scene_rmses else 0.0
+#     }
+    
+#     return subset_metrics, overall_metrics
+
 def evaluate_by_subset(preds, targets, keys):
     """
-    [修改版] 逐场景平均 (Scene-by-Scene) 评估模式
-    符合 NVS-SQA 论文标准，能显著提升 LLFF 和 Fieldwork 的指标
+    [修复版] 强壮的评估函数
+    1. 修复 KeyError: 即使预测全炸(NaN)，也能返回全0的字典，防止程序中断。
+    2. 修复 KRCC=0: 增加了 Kendall's Tau 的计算。
+    3. 采用 NVS-SQA 标准的逐场景平均 (Scene-by-Scene) 计算方式。
     """
     preds = np.array(preds).flatten()
     targets = np.array(targets).flatten()
     
-    # --- 1. 数据清洗 ---
+    # --- 1. 预定义全零结果结构 (防止 KeyError 的核心!) ---
+    # 无论后面发生什么，这个结构保证了 'llff', 'fieldwork' 等 key 永远存在
+    final_subset_metrics = {
+        subset: {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0, "count": 0}
+        for subset in ffv_consts.SUBSETS
+    }
+    
+    # --- 2. 数据清洗 (过滤 NaN/Inf) ---
     valid_mask = np.isfinite(preds) & np.isfinite(targets)
     if not valid_mask.all():
-        print(f"Warning: Found {(~valid_mask).sum()} invalid predictions, filtering...")
+        print(f"Warning: Found {(~valid_mask).sum()} invalid predictions (NaN/Inf). Filtering...")
         preds = preds[valid_mask]
         targets = targets[valid_mask]
         keys = [k for i, k in enumerate(keys) if valid_mask[i]]
-        
+    
+    # 如果过滤后没数据了，直接返回预定义的零结果
     if len(preds) < 2:
-        return {}, {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0}
+        print("Error: Too few valid predictions to evaluate. Returning 0 metrics.")
+        return final_subset_metrics, {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0}
 
-    # 用于收集所有场景的指标，最后计算 Overall Mean
-    all_scene_srccs = []
-    all_scene_plccs = []
-    all_scene_krccs = []
-    all_scene_rmses = []
+    # 用于计算 Overall (所有场景的平均)
+    all_scene_metrics = {"srcc": [], "plcc": [], "krcc": [], "rmse": []}
     
-    subset_metrics = {}
-    
-    # --- 2. 遍历每个子集 ---
+    # --- 3. 逐子集、逐场景计算 ---
     for subset in ffv_consts.SUBSETS:
-        # 找到属于当前子集的所有样本索引
-        # key 格式示例: "llff+fern+nerf" -> subset=llff
+        # 找到属于当前子集的所有样本
         subset_indices = [i for i, k in enumerate(keys) if ffv_consts.get_subset_from_key(k) == subset]
         
         if len(subset_indices) < 2:
-            subset_metrics[subset] = {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0, "count": 0}
-            continue
+            continue # 该子集没数据，保持默认的 0 分
 
-        # --- 3. 动态解析该子集下的唯一场景 ---
-        # 假设 key 格式为 "subset+scene+method"
+        # 动态解析该子集下的唯一场景 (例如 fern, trex...)
         subset_keys = [keys[i] for i in subset_indices]
         try:
             unique_scenes = set(k.split('+')[1] for k in subset_keys)
         except IndexError:
-            print(f"Error parsing scenes for subset {subset}, falling back to pooled.")
             unique_scenes = []
 
-        scene_srccs = []
-        scene_plccs = []
-        scene_krccs = []
-        scene_rmses = []
+        scene_metrics_list = {"srcc": [], "plcc": [], "krcc": [], "rmse": []}
         
-        # --- 4. 逐场景计算指标 ---
+        # 遍历该子集下的每一个场景
         for scene in unique_scenes:
-            # 找到属于该特定场景的样本 (例如所有 fern 的视频)
+            # 找到属于该特定场景的样本
             scene_indices = [i for i in subset_indices if f"+{scene}+" in keys[i]]
             
-            if len(scene_indices) < 3: # 样本太少不算相关性
-                continue
+            if len(scene_indices) < 3: continue # 样本太少不算
             
             s_preds = preds[scene_indices]
             s_targets = targets[scene_indices]
             
-            # 计算该场景的 SRCC/PLCC
-            # 某些场景如果预测值完全一样（常数），相关性会报错或产生NaN，需处理
             try:
-                # SRCC
+                # 计算指标
                 s_srcc = spearmanr(s_preds, s_targets).correlation
-                if np.isfinite(s_srcc): 
-                    scene_srccs.append(s_srcc)
-                    all_scene_srccs.append(s_srcc)
-                
-                # PLCC
                 s_plcc = pearsonr(s_preds, s_targets)[0]
-                if np.isfinite(s_plcc): 
-                    scene_plccs.append(s_plcc)
-                    all_scene_plccs.append(s_plcc)
-
-                # --- 新增 KRCC 计算 ---
-                s_krcc = kendalltau(s_preds, s_targets)[0]
-                if np.isfinite(s_krcc):
-                    scene_krccs.append(s_krcc) # 记得在循环外初始化这个列表: scene_krccs = []
-                    all_scene_krccs.append(s_krcc) # 记得在函数开头初始化: all_scene_krccs = []
-                
-                # RMSE
+                s_krcc = kendalltau(s_preds, s_targets)[0] # 修复 KRCC
                 s_rmse = np.sqrt(np.mean((s_preds - s_targets) ** 2))
-                scene_rmses.append(s_rmse)
-                all_scene_rmses.append(s_rmse)
+                
+                # 收集有效指标
+                if np.isfinite(s_srcc): 
+                    scene_metrics_list["srcc"].append(s_srcc)
+                    all_scene_metrics["srcc"].append(s_srcc)
+                if np.isfinite(s_plcc): 
+                    scene_metrics_list["plcc"].append(s_plcc)
+                    all_scene_metrics["plcc"].append(s_plcc)
+                if np.isfinite(s_krcc): 
+                    scene_metrics_list["krcc"].append(s_krcc)
+                    all_scene_metrics["krcc"].append(s_krcc)
+                scene_metrics_list["rmse"].append(s_rmse)
+                all_scene_metrics["rmse"].append(s_rmse)
+                
             except Exception:
                 pass
         
-        # --- 5. 计算子集平均分 (Mean over scenes) ---
-        count = len(scene_srccs)
-        if count > 0:
-            subset_metrics[subset] = {
-                "srcc": np.mean(scene_srccs),
-                "plcc": np.mean(scene_plccs),
-                "krcc": np.mean(scene_krccs), 
-                "rmse": np.mean(scene_rmses),
-                "count": count
+        # 计算该子集的平均分
+        if len(scene_metrics_list["srcc"]) > 0:
+            final_subset_metrics[subset] = {
+                "srcc": np.mean(scene_metrics_list["srcc"]),
+                "plcc": np.mean(scene_metrics_list["plcc"]),
+                "krcc": np.mean(scene_metrics_list["krcc"]),
+                "rmse": np.mean(scene_metrics_list["rmse"]),
+                "count": len(subset_indices)
             }
-        else:
-            subset_metrics[subset] = {"srcc": 0.0, "plcc": 0.0, "krcc": 0.0, "rmse": 0.0, "count": 0}
 
-    # --- 6. 计算 Overall 平均分 ---
-    # SQA 论文中的 Overall 也是所有场景分数的平均值
+    # --- 4. 计算 Overall (所有场景平均) ---
     overall_metrics = {
-        "srcc": np.mean(all_scene_srccs) if all_scene_srccs else 0.0,
-        "plcc": np.mean(all_scene_plccs) if all_scene_plccs else 0.0,
-        "krcc": np.mean(all_scene_krccs) if all_scene_krccs else 0.0,
-        "rmse": np.mean(all_scene_rmses) if all_scene_rmses else 0.0
+        k: np.mean(v) if len(v) > 0 else 0.0 
+        for k, v in all_scene_metrics.items()
     }
     
-    return subset_metrics, overall_metrics
+    return final_subset_metrics, overall_metrics
 
 # ==========================================
 # 5. 单次训练函数 (Train Single Run)
@@ -437,7 +538,7 @@ def train_single_run(args, seed, run_idx):
             optimizer.zero_grad()
             total_loss.backward()
             # 添加梯度裁剪防止梯度爆炸
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
             optimizer.step()
             
             if not args.no_wandb:

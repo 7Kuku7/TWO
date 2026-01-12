@@ -1,0 +1,41 @@
+{
+    "experiment_name": "ffv_test1",
+    "num_repeats": 1,
+    "seeds": [
+        42
+    ],
+    "results": {
+        "overall_srcc_mean": 0.6541666666666667,
+        "overall_srcc_std": 0.0,
+        "overall_plcc_mean": 0.7104623842258605,
+        "overall_plcc_std": 0.0,
+        "overall_krcc_mean": 0.0,
+        "overall_krcc_std": 0.0,
+        "overall_rmse_mean": 0.7104824185371399,
+        "overall_rmse_std": 0.0,
+        "llff_srcc_mean": 0.6874999999999999,
+        "llff_srcc_std": 0.0,
+        "llff_plcc_mean": 0.6770172241722425,
+        "llff_plcc_std": 0.0,
+        "llff_krcc_mean": 0.0,
+        "llff_krcc_std": 0.0,
+        "llff_rmse_mean": 0.5078798532485962,
+        "llff_rmse_std": 0.0,
+        "fieldwork_srcc_mean": 0.7777777777777776,
+        "fieldwork_srcc_std": 0.0,
+        "fieldwork_plcc_mean": 0.8363872455461939,
+        "fieldwork_plcc_std": 0.0,
+        "fieldwork_krcc_mean": 0.0,
+        "fieldwork_krcc_std": 0.0,
+        "fieldwork_rmse_mean": 1.0690065622329712,
+        "fieldwork_rmse_std": 0.0,
+        "lab_srcc_mean": 0.45714285714285713,
+        "lab_srcc_std": 0.0,
+        "lab_plcc_mean": 0.5867820311609947,
+        "lab_plcc_std": 0.0,
+        "lab_krcc_mean": 0.0,
+        "lab_krcc_std": 0.0,
+        "lab_rmse_mean": 0.48106852173805237,
+        "lab_rmse_std": 0.0
+    }
+}

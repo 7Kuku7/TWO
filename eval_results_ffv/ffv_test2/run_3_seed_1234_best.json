@@ -1,0 +1,758 @@
+{
+    "run_info": {
+        "run_index": 3,
+        "seed": 1234,
+        "best_epoch": 11
+    },
+    "overall_metrics": {
+        "SRCC": 0.7291666666666666,
+        "PLCC": 0.7494386256133,
+        "KRCC": 0.0,
+        "RMSE": 0.5720753073692322
+    },
+    "subset_metrics": {
+        "llff": {
+            "srcc": 0.8124999999999999,
+            "plcc": 0.8170124462673722,
+            "krcc": 0.0,
+            "rmse": 0.5249125957489014,
+            "count": 8
+        },
+        "fieldwork": {
+            "srcc": 0.8777777777777775,
+            "plcc": 0.8246229769737791,
+            "krcc": 0.0,
+            "rmse": 0.7009295225143433,
+            "count": 9
+        },
+        "lab": {
+            "srcc": 0.4428571428571428,
+            "plcc": 0.5755458074023159,
+            "krcc": 0.0,
+            "rmse": 0.46030572056770325,
+            "count": 7
+        }
+    },
+    "per_video_results": [
+        {
+            "video_name": "fieldwork+Giraffe+ibrnet_pretrain",
+            "subset": "fieldwork",
+            "predicted_score": -0.28031906485557556,
+            "ground_truth_score": -1.0043056011199951
+        },
+        {
+            "video_name": "fieldwork+Giraffe+ibrnet_finetune",
+            "subset": "fieldwork",
+            "predicted_score": 0.2024586796760559,
+            "ground_truth_score": -0.12665563821792603
+        },
+        {
+            "video_name": "fieldwork+Giraffe+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": 0.7522316575050354,
+            "ground_truth_score": -0.0661952942609787
+        },
+        {
+            "video_name": "fieldwork+Giraffe+nex",
+            "subset": "fieldwork",
+            "predicted_score": 0.7630600333213806,
+            "ground_truth_score": 0.449700266122818
+        },
+        {
+            "video_name": "fieldwork+Giraffe+nerf",
+            "subset": "fieldwork",
+            "predicted_score": 0.1462603509426117,
+            "ground_truth_score": -0.14769288897514343
+        },
+        {
+            "video_name": "fieldwork+Vespa+nex",
+            "subset": "fieldwork",
+            "predicted_score": 0.6562628149986267,
+            "ground_truth_score": 0.7397847771644592
+        },
+        {
+            "video_name": "fieldwork+Vespa+ibrnet_finetune",
+            "subset": "fieldwork",
+            "predicted_score": -2.1323366165161133,
+            "ground_truth_score": -2.276840925216675
+        },
+        {
+            "video_name": "fieldwork+Vespa+gnt_crossscene",
+            "subset": "fieldwork",
+            "predicted_score": -2.9116368293762207,
+            "ground_truth_score": -3.9902353286743164
+        },
+        {
+            "video_name": "fieldwork+Vespa+gnt_singlescene",
+            "subset": "fieldwork",
+            "predicted_score": -2.9109606742858887,
+            "ground_truth_score": -3.4653780460357666
+        },
+        {
+            "video_name": "fieldwork+Vespa+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": 0.4828173816204071,
+            "ground_truth_score": -0.1595083475112915
+        },
+        {
+            "video_name": "fieldwork+Puccini_statue+nex",
+            "subset": "fieldwork",
+            "predicted_score": 0.6602401733398438,
+            "ground_truth_score": 0.6608964800834656
+        },
+        {
+            "video_name": "fieldwork+Puccini_statue+light_field",
+            "subset": "fieldwork",
+            "predicted_score": 0.47120770812034607,
+            "ground_truth_score": -0.3426833152770996
+        },
+        {
+            "video_name": "fieldwork+Puccini_statue+nerf",
+            "subset": "fieldwork",
+            "predicted_score": 0.6424769759178162,
+            "ground_truth_score": 0.3887825906276703
+        },
+        {
+            "video_name": "fieldwork+Puccini_statue+mipnerf",
+            "subset": "fieldwork",
+            "predicted_score": 0.6634461283683777,
+            "ground_truth_score": 1.0865178108215332
+        },
+        {
+            "video_name": "fieldwork+Puccini_statue+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": 0.6591965556144714,
+            "ground_truth_score": 0.4283755123615265
+        },
+        {
+            "video_name": "llff+room+plenoxel",
+            "subset": "llff",
+            "predicted_score": 0.6978197693824768,
+            "ground_truth_score": -0.06051717326045036
+        },
+        {
+            "video_name": "llff+room+nerf",
+            "subset": "llff",
+            "predicted_score": 0.7445411086082458,
+            "ground_truth_score": 0.552257239818573
+        },
+        {
+            "video_name": "llff+room+directvoxgo",
+            "subset": "llff",
+            "predicted_score": 0.6618926525115967,
+            "ground_truth_score": 0.0430254265666008
+        },
+        {
+            "video_name": "llff+room+gnt_crossscene",
+            "subset": "llff",
+            "predicted_score": 0.7581290602684021,
+            "ground_truth_score": 0.1556507796049118
+        },
+        {
+            "video_name": "llff+room+nex",
+            "subset": "llff",
+            "predicted_score": 0.6805552840232849,
+            "ground_truth_score": -0.8904417157173157
+        },
+        {
+            "video_name": "llff+orchids+gnt_singlescene",
+            "subset": "llff",
+            "predicted_score": 0.4468483030796051,
+            "ground_truth_score": -0.6071717143058777
+        },
+        {
+            "video_name": "llff+orchids+light_field",
+            "subset": "llff",
+            "predicted_score": 0.4554373323917389,
+            "ground_truth_score": -0.2813742458820343
+        },
+        {
+            "video_name": "llff+orchids+nex",
+            "subset": "llff",
+            "predicted_score": 0.7425168752670288,
+            "ground_truth_score": 0.773999035358429
+        },
+        {
+            "video_name": "llff+orchids+ibrnet_finetune",
+            "subset": "llff",
+            "predicted_score": 0.5918306708335876,
+            "ground_truth_score": 0.5389353036880493
+        },
+        {
+            "video_name": "llff+orchids+nerf",
+            "subset": "llff",
+            "predicted_score": 0.7412917017936707,
+            "ground_truth_score": 0.7143065929412842
+        },
+        {
+            "video_name": "llff+leaves+directvoxgo",
+            "subset": "llff",
+            "predicted_score": 0.05673111230134964,
+            "ground_truth_score": 0.48556602001190186
+        },
+        {
+            "video_name": "llff+leaves+nex",
+            "subset": "llff",
+            "predicted_score": 0.05110938102006912,
+            "ground_truth_score": 0.7365155816078186
+        },
+        {
+            "video_name": "llff+leaves+mipnerf",
+            "subset": "llff",
+            "predicted_score": 0.048897407948970795,
+            "ground_truth_score": 0.22069883346557617
+        },
+        {
+            "video_name": "llff+leaves+ibrnet_pretrain",
+            "subset": "llff",
+            "predicted_score": -0.03269891068339348,
+            "ground_truth_score": -0.427869588136673
+        },
+        {
+            "video_name": "llff+leaves+nerf",
+            "subset": "llff",
+            "predicted_score": -0.030973292887210846,
+            "ground_truth_score": -0.573858916759491
+        },
+        {
+            "video_name": "fieldwork+Whale+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": -3.294088840484619,
+            "ground_truth_score": -4.006318092346191
+        },
+        {
+            "video_name": "fieldwork+Whale+ibrnet_finetune",
+            "subset": "fieldwork",
+            "predicted_score": -2.5524585247039795,
+            "ground_truth_score": -1.3938238620758057
+        },
+        {
+            "video_name": "fieldwork+Whale+nex",
+            "subset": "fieldwork",
+            "predicted_score": -2.1293559074401855,
+            "ground_truth_score": 0.023409219458699226
+        },
+        {
+            "video_name": "fieldwork+Whale+gnt_crossscene",
+            "subset": "fieldwork",
+            "predicted_score": -3.8771350383758545,
+            "ground_truth_score": -5.371621131896973
+        },
+        {
+            "video_name": "fieldwork+Whale+directvoxgo",
+            "subset": "fieldwork",
+            "predicted_score": -2.233015537261963,
+            "ground_truth_score": -1.5607861280441284
+        },
+        {
+            "video_name": "llff+fern+nerf",
+            "subset": "llff",
+            "predicted_score": 0.7696791291236877,
+            "ground_truth_score": 0.6064941883087158
+        },
+        {
+            "video_name": "llff+fern+plenoxel",
+            "subset": "llff",
+            "predicted_score": 0.8089919090270996,
+            "ground_truth_score": 0.9084363579750061
+        },
+        {
+            "video_name": "llff+fern+nex",
+            "subset": "llff",
+            "predicted_score": 0.8393780589103699,
+            "ground_truth_score": 0.9135950803756714
+        },
+        {
+            "video_name": "llff+fern+ibrnet_finetune",
+            "subset": "llff",
+            "predicted_score": 0.8082521557807922,
+            "ground_truth_score": 0.9066171050071716
+        },
+        {
+            "video_name": "llff+fern+directvoxgo",
+            "subset": "llff",
+            "predicted_score": 0.777834415435791,
+            "ground_truth_score": 0.5958598852157593
+        },
+        {
+            "video_name": "lab+CD_occlusion_intr+directvoxgo",
+            "subset": "lab",
+            "predicted_score": 0.6315276622772217,
+            "ground_truth_score": -0.03808574005961418
+        },
+        {
+            "video_name": "lab+CD_occlusion_intr+gnt_singlescene",
+            "subset": "lab",
+            "predicted_score": 0.5590343475341797,
+            "ground_truth_score": 0.17448654770851135
+        },
+        {
+            "video_name": "lab+CD_occlusion_intr+ibrnet_pretrain",
+            "subset": "lab",
+            "predicted_score": 0.6266996264457703,
+            "ground_truth_score": -0.14412561058998108
+        },
+        {
+            "video_name": "lab+CD_occlusion_intr+ibrnet_finetune",
+            "subset": "lab",
+            "predicted_score": 0.6316351294517517,
+            "ground_truth_score": 0.5649436712265015
+        },
+        {
+            "video_name": "lab+CD_occlusion_intr+plenoxel",
+            "subset": "lab",
+            "predicted_score": 0.6282265186309814,
+            "ground_truth_score": 0.08868018537759781
+        },
+        {
+            "video_name": "lab+Glossy_animals_intr+directvoxgo",
+            "subset": "lab",
+            "predicted_score": 0.4512843191623688,
+            "ground_truth_score": -0.9672021865844727
+        },
+        {
+            "video_name": "lab+Glossy_animals_intr+light_field",
+            "subset": "lab",
+            "predicted_score": 0.4709024727344513,
+            "ground_truth_score": 0.7544746398925781
+        },
+        {
+            "video_name": "lab+Glossy_animals_intr+ibrnet_finetune",
+            "subset": "lab",
+            "predicted_score": 0.4596441090106964,
+            "ground_truth_score": 0.4108044505119324
+        },
+        {
+            "video_name": "lab+Glossy_animals_intr+gnt_singlescene",
+            "subset": "lab",
+            "predicted_score": 0.44853881001472473,
+            "ground_truth_score": 0.43080461025238037
+        },
+        {
+            "video_name": "lab+Glossy_animals_intr+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.45701852440834045,
+            "ground_truth_score": -0.2559696435928345
+        },
+        {
+            "video_name": "llff+horns+ibrnet_pretrain",
+            "subset": "llff",
+            "predicted_score": 0.6550506949424744,
+            "ground_truth_score": -0.22555066645145416
+        },
+        {
+            "video_name": "llff+horns+nerf",
+            "subset": "llff",
+            "predicted_score": -0.24606698751449585,
+            "ground_truth_score": -0.5602796077728271
+        },
+        {
+            "video_name": "llff+horns+ibrnet_finetune",
+            "subset": "llff",
+            "predicted_score": 0.6921668648719788,
+            "ground_truth_score": 0.3286608159542084
+        },
+        {
+            "video_name": "llff+horns+nex",
+            "subset": "llff",
+            "predicted_score": 0.4478659927845001,
+            "ground_truth_score": -0.04279082641005516
+        },
+        {
+            "video_name": "llff+horns+gnt_singlescene",
+            "subset": "llff",
+            "predicted_score": 0.6826543211936951,
+            "ground_truth_score": 0.10941966623067856
+        },
+        {
+            "video_name": "lab+Toys+directvoxgo",
+            "subset": "lab",
+            "predicted_score": 1.0215305089950562,
+            "ground_truth_score": 0.9099769592285156
+        },
+        {
+            "video_name": "lab+Toys+plenoxel",
+            "subset": "lab",
+            "predicted_score": 1.0214239358901978,
+            "ground_truth_score": 0.7378053665161133
+        },
+        {
+            "video_name": "lab+Toys+nex",
+            "subset": "lab",
+            "predicted_score": 1.0209158658981323,
+            "ground_truth_score": 0.45094794034957886
+        },
+        {
+            "video_name": "lab+Toys+mipnerf",
+            "subset": "lab",
+            "predicted_score": 1.0200215578079224,
+            "ground_truth_score": 1.044463038444519
+        },
+        {
+            "video_name": "lab+Toys+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.6764717698097229,
+            "ground_truth_score": -0.9459753036499023
+        },
+        {
+            "video_name": "llff+trex+nerf",
+            "subset": "llff",
+            "predicted_score": 0.6253877282142639,
+            "ground_truth_score": -0.2215847373008728
+        },
+        {
+            "video_name": "llff+trex+directvoxgo",
+            "subset": "llff",
+            "predicted_score": 0.6831547617912292,
+            "ground_truth_score": 0.9135950803756714
+        },
+        {
+            "video_name": "llff+trex+gnt_crossscene",
+            "subset": "llff",
+            "predicted_score": 0.5351634621620178,
+            "ground_truth_score": -0.6477175354957581
+        },
+        {
+            "video_name": "llff+trex+mipnerf",
+            "subset": "llff",
+            "predicted_score": 0.7008957266807556,
+            "ground_truth_score": 0.4454873204231262
+        },
+        {
+            "video_name": "llff+trex+gnt_singlescene",
+            "subset": "llff",
+            "predicted_score": 0.6792629361152649,
+            "ground_truth_score": -0.09698645770549774
+        },
+        {
+            "video_name": "fieldwork+Dinosaur+directvoxgo",
+            "subset": "fieldwork",
+            "predicted_score": 0.8824397921562195,
+            "ground_truth_score": -0.09190051257610321
+        },
+        {
+            "video_name": "fieldwork+Dinosaur+ibrnet_finetune",
+            "subset": "fieldwork",
+            "predicted_score": -0.5312005281448364,
+            "ground_truth_score": -0.4636772871017456
+        },
+        {
+            "video_name": "fieldwork+Dinosaur+ibrnet_pretrain",
+            "subset": "fieldwork",
+            "predicted_score": -1.5290642976760864,
+            "ground_truth_score": -1.71549654006958
+        },
+        {
+            "video_name": "fieldwork+Dinosaur+light_field",
+            "subset": "fieldwork",
+            "predicted_score": 0.17178994417190552,
+            "ground_truth_score": -0.5980069041252136
+        },
+        {
+            "video_name": "fieldwork+Dinosaur+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": 0.8777653574943542,
+            "ground_truth_score": -0.35329896211624146
+        },
+        {
+            "video_name": "fieldwork+Elephant+ibrnet_finetune",
+            "subset": "fieldwork",
+            "predicted_score": 0.8384578824043274,
+            "ground_truth_score": 0.0271853506565094
+        },
+        {
+            "video_name": "fieldwork+Elephant+ibrnet_pretrain",
+            "subset": "fieldwork",
+            "predicted_score": 0.2778756320476532,
+            "ground_truth_score": -0.7254915833473206
+        },
+        {
+            "video_name": "fieldwork+Elephant+nex",
+            "subset": "fieldwork",
+            "predicted_score": 0.8862370848655701,
+            "ground_truth_score": 0.9722738265991211
+        },
+        {
+            "video_name": "fieldwork+Elephant+light_field",
+            "subset": "fieldwork",
+            "predicted_score": 0.4080447554588318,
+            "ground_truth_score": -0.22455044090747833
+        },
+        {
+            "video_name": "fieldwork+Elephant+directvoxgo",
+            "subset": "fieldwork",
+            "predicted_score": 0.8949655890464783,
+            "ground_truth_score": 0.8823817372322083
+        },
+        {
+            "video_name": "lab+Glossy_animals_extr+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.4426444470882416,
+            "ground_truth_score": -0.12255913019180298
+        },
+        {
+            "video_name": "lab+Glossy_animals_extr+nerf",
+            "subset": "lab",
+            "predicted_score": 0.45281603932380676,
+            "ground_truth_score": 0.7472454309463501
+        },
+        {
+            "video_name": "lab+Glossy_animals_extr+nex",
+            "subset": "lab",
+            "predicted_score": 0.46626314520835876,
+            "ground_truth_score": 0.6326197981834412
+        },
+        {
+            "video_name": "lab+Glossy_animals_extr+gnt_singlescene",
+            "subset": "lab",
+            "predicted_score": 0.47315719723701477,
+            "ground_truth_score": 0.4859301745891571
+        },
+        {
+            "video_name": "lab+Glossy_animals_extr+mipnerf",
+            "subset": "lab",
+            "predicted_score": 0.47250857949256897,
+            "ground_truth_score": 0.662848949432373
+        },
+        {
+            "video_name": "llff+flower+nerf",
+            "subset": "llff",
+            "predicted_score": 0.7069129347801208,
+            "ground_truth_score": 0.3079847991466522
+        },
+        {
+            "video_name": "llff+flower+light_field",
+            "subset": "llff",
+            "predicted_score": 0.6575165390968323,
+            "ground_truth_score": 0.07318615913391113
+        },
+        {
+            "video_name": "llff+flower+ibrnet_finetune",
+            "subset": "llff",
+            "predicted_score": 0.6952406764030457,
+            "ground_truth_score": -0.15972895920276642
+        },
+        {
+            "video_name": "llff+flower+nex",
+            "subset": "llff",
+            "predicted_score": 0.7070963978767395,
+            "ground_truth_score": 0.46244871616363525
+        },
+        {
+            "video_name": "llff+flower+gnt_singlescene",
+            "subset": "llff",
+            "predicted_score": 0.6627508401870728,
+            "ground_truth_score": -0.4067201316356659
+        },
+        {
+            "video_name": "fieldwork+Naiad_statue+gnt_singlescene",
+            "subset": "fieldwork",
+            "predicted_score": -2.872976303100586,
+            "ground_truth_score": -1.3212664127349854
+        },
+        {
+            "video_name": "fieldwork+Naiad_statue+ibrnet_pretrain",
+            "subset": "fieldwork",
+            "predicted_score": -2.419618606567383,
+            "ground_truth_score": -1.2690716981887817
+        },
+        {
+            "video_name": "fieldwork+Naiad_statue+directvoxgo",
+            "subset": "fieldwork",
+            "predicted_score": 0.6451111435890198,
+            "ground_truth_score": -0.09683876484632492
+        },
+        {
+            "video_name": "fieldwork+Naiad_statue+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": -1.8470357656478882,
+            "ground_truth_score": -0.5597206354141235
+        },
+        {
+            "video_name": "fieldwork+Naiad_statue+gnt_crossscene",
+            "subset": "fieldwork",
+            "predicted_score": -2.9148976802825928,
+            "ground_truth_score": -2.2443947792053223
+        },
+        {
+            "video_name": "fieldwork+Leopards+gnt_crossscene",
+            "subset": "fieldwork",
+            "predicted_score": -1.2400476932525635,
+            "ground_truth_score": -0.9592616558074951
+        },
+        {
+            "video_name": "fieldwork+Leopards+nex",
+            "subset": "fieldwork",
+            "predicted_score": 0.8104997277259827,
+            "ground_truth_score": 0.9797705411911011
+        },
+        {
+            "video_name": "fieldwork+Leopards+ibrnet_pretrain",
+            "subset": "fieldwork",
+            "predicted_score": -0.7002260088920593,
+            "ground_truth_score": -0.6421913504600525
+        },
+        {
+            "video_name": "fieldwork+Leopards+nerf",
+            "subset": "fieldwork",
+            "predicted_score": 0.7965328097343445,
+            "ground_truth_score": 0.022792141884565353
+        },
+        {
+            "video_name": "fieldwork+Leopards+plenoxel",
+            "subset": "fieldwork",
+            "predicted_score": 0.811732828617096,
+            "ground_truth_score": 0.7204866409301758
+        },
+        {
+            "video_name": "lab+CD_occlusion_extr+mipnerf",
+            "subset": "lab",
+            "predicted_score": 0.6372163891792297,
+            "ground_truth_score": 0.43026697635650635
+        },
+        {
+            "video_name": "lab+CD_occlusion_extr+plenoxel",
+            "subset": "lab",
+            "predicted_score": 0.6286542415618896,
+            "ground_truth_score": 0.046084143221378326
+        },
+        {
+            "video_name": "lab+CD_occlusion_extr+ibrnet_pretrain",
+            "subset": "lab",
+            "predicted_score": 0.6324889659881592,
+            "ground_truth_score": 0.24280931055545807
+        },
+        {
+            "video_name": "lab+CD_occlusion_extr+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.5987176299095154,
+            "ground_truth_score": -0.025554809719324112
+        },
+        {
+            "video_name": "lab+CD_occlusion_extr+nex",
+            "subset": "lab",
+            "predicted_score": 0.6334342956542969,
+            "ground_truth_score": 0.44205212593078613
+        },
+        {
+            "video_name": "lab+Metal+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.84735506772995,
+            "ground_truth_score": 0.509096086025238
+        },
+        {
+            "video_name": "lab+Metal+plenoxel",
+            "subset": "lab",
+            "predicted_score": 0.9108702540397644,
+            "ground_truth_score": 0.6342515349388123
+        },
+        {
+            "video_name": "lab+Metal+directvoxgo",
+            "subset": "lab",
+            "predicted_score": 0.913581907749176,
+            "ground_truth_score": 0.5679317712783813
+        },
+        {
+            "video_name": "lab+Metal+ibrnet_finetune",
+            "subset": "lab",
+            "predicted_score": 0.8896426558494568,
+            "ground_truth_score": 0.8486782908439636
+        },
+        {
+            "video_name": "lab+Metal+nerf",
+            "subset": "lab",
+            "predicted_score": 0.9119871258735657,
+            "ground_truth_score": 0.7219662666320801
+        },
+        {
+            "video_name": "llff+fortress+nerf",
+            "subset": "llff",
+            "predicted_score": 0.4478696882724762,
+            "ground_truth_score": 0.2571195960044861
+        },
+        {
+            "video_name": "llff+fortress+ibrnet_finetune",
+            "subset": "llff",
+            "predicted_score": 0.6917026042938232,
+            "ground_truth_score": 0.6758005619049072
+        },
+        {
+            "video_name": "llff+fortress+gnt_singlescene",
+            "subset": "llff",
+            "predicted_score": 0.6979985237121582,
+            "ground_truth_score": 0.9135950803756714
+        },
+        {
+            "video_name": "llff+fortress+light_field",
+            "subset": "llff",
+            "predicted_score": 0.3143743574619293,
+            "ground_truth_score": 0.31418466567993164
+        },
+        {
+            "video_name": "llff+fortress+gnt_crossscene",
+            "subset": "llff",
+            "predicted_score": 0.4024970829486847,
+            "ground_truth_score": 0.43096935749053955
+        },
+        {
+            "video_name": "fieldwork+Bears+gnt_singlescene",
+            "subset": "fieldwork",
+            "predicted_score": -0.17213048040866852,
+            "ground_truth_score": -0.059847354888916016
+        },
+        {
+            "video_name": "fieldwork+Bears+nex",
+            "subset": "fieldwork",
+            "predicted_score": -0.12274467945098877,
+            "ground_truth_score": 0.5394014120101929
+        },
+        {
+            "video_name": "fieldwork+Bears+light_field",
+            "subset": "fieldwork",
+            "predicted_score": -0.244943767786026,
+            "ground_truth_score": -0.3797682821750641
+        },
+        {
+            "video_name": "fieldwork+Bears+nerf",
+            "subset": "fieldwork",
+            "predicted_score": -0.35450974106788635,
+            "ground_truth_score": -0.17913947999477386
+        },
+        {
+            "video_name": "fieldwork+Bears+directvoxgo",
+            "subset": "fieldwork",
+            "predicted_score": -0.13624650239944458,
+            "ground_truth_score": -0.7285044193267822
+        },
+        {
+            "video_name": "lab+Glass+nex",
+            "subset": "lab",
+            "predicted_score": 0.90829998254776,
+            "ground_truth_score": 0.8188900947570801
+        },
+        {
+            "video_name": "lab+Glass+gnt_singlescene",
+            "subset": "lab",
+            "predicted_score": 0.8693103194236755,
+            "ground_truth_score": 0.7799590229988098
+        },
+        {
+            "video_name": "lab+Glass+ibrnet_pretrain",
+            "subset": "lab",
+            "predicted_score": 0.9094849228858948,
+            "ground_truth_score": 0.8794429898262024
+        },
+        {
+            "video_name": "lab+Glass+gnt_crossscene",
+            "subset": "lab",
+            "predicted_score": 0.8603221774101257,
+            "ground_truth_score": 0.5217138528823853
+        },
+        {
+            "video_name": "lab+Glass+nerf",
+            "subset": "lab",
+            "predicted_score": 0.9190669655799866,
+            "ground_truth_score": 0.8461836576461792
+        }
+    ]
+}

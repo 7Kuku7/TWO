@@ -117,13 +117,14 @@ class SelfSupervisedAugmentor:
 # ==========================================
 # 3. Dataset
 # ==========================================
-class AdvancedOFNeRFDataset(OFNeRFDataset):
-    def __init__(self, root_dir, mos_file, mode='train', transform=None, distortion_sampling=False, num_frames=8, use_subscores=False):
+class AdvancedOFNeRFDataset(OFNeRFDataset):   
+    # [修改 1] __init__ 增加 enable_ssl 参数，默认为 True
+    def __init__(self, root_dir, mos_file, mode='train', transform=None, distortion_sampling=False, num_frames=8, use_subscores=False, enable_ssl=True):
         super().__init__(root_dir, mos_file, mode, transform, distortion_sampling, num_frames)
 
         self.mode = mode
-
         self.use_subscores = use_subscores
+        self.enable_ssl = enable_ssl # [新增] 保存状态
         self.augmentor = SelfSupervisedAugmentor()
 
     def __getitem__(self, idx):
@@ -148,10 +149,11 @@ class AdvancedOFNeRFDataset(OFNeRFDataset):
         
         frames_pil = self._load_frames_pil(folder_path)
         
-        if self.mode == 'train':
+        # 修改后：必须是训练模式，并且开启了 SSL 开关，才做增强
+        if self.mode == 'train' and self.enable_ssl:
             frames_aug_pil = self.augmentor(frames_pil)
         else:
-            frames_aug_pil = frames_pil 
+            frames_aug_pil = frames_pil
         
         content_input = self._apply_transform(frames_pil)
         content_input_aug = self._apply_transform(frames_aug_pil)
@@ -209,14 +211,38 @@ def train_single_run(args, seed, run_idx):
     save_dir = f"eval_results_repeated/{args.experiment_name}"
     os.makedirs(f"checkpoints_repeated/{args.experiment_name}", exist_ok=True)
     os.makedirs(save_dir, exist_ok=True)
+
+    # ============ [新增/修改 START] 消融实验逻辑控制 ============
+    # 1. 消融 SSL (自监督): 如果 args.no_ssl 为 True，则 dataset 不增强，且 lambda_ssl = 0
+    current_enable_ssl = not args.no_ssl
+    current_lambda_ssl = 0.0 if args.no_ssl else args.lambda_ssl
+    # 2. 消融 Decoupling (解耦): 如果 args.no_decouple 为 True，则 lambda_mi = 0
+    current_lambda_mi = 0.0 if args.no_decouple else args.lambda_mi
+    # 3. 消融 Multi-task (多任务): 如果 args.no_multitask 为 True，则 lambda_sub = 0，且不使用子分数
+    current_use_subscores = False if args.no_multitask else args.use_subscores
+    current_lambda_sub = 0.0 if args.no_multitask else args.lambda_sub
     
+    # ============ [新增/修改 END] ============
     if args.no_multiscale:
         transform = T.Compose([T.Resize((224, 224)), T.ToTensor(), T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
     else:
         transform = T.Compose([MultiScaleCrop(224), T.ToTensor(), T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
     
-    train_set = AdvancedOFNeRFDataset(args.root_dir, args.mos_file, mode='train', transform=transform, distortion_sampling=True, use_subscores=args.use_subscores)
-    val_set = AdvancedOFNeRFDataset(args.root_dir, args.mos_file, mode='val', transform=transform, distortion_sampling=False, use_subscores=args.use_subscores)
+   # ============ [修改 Dataset 初始化] ============
+    # 传入上面计算好的 current_use_subscores 和 current_enable_ssl
+    train_set = AdvancedOFNeRFDataset(
+        args.root_dir, args.mos_file, mode='train', transform=transform, 
+        distortion_sampling=True, 
+        use_subscores=current_use_subscores, # [修改] 使用动态变量
+        enable_ssl=current_enable_ssl        # [修改] 使用动态变量
+    )
+    val_set = AdvancedOFNeRFDataset(
+        args.root_dir, args.mos_file, mode='val', transform=transform, 
+        distortion_sampling=False, 
+        use_subscores=current_use_subscores, # [修改] 使用动态变量
+        enable_ssl=False                     # Val 永远不需要 SSL 增强
+    )
+    # ===============================================
     
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4)
@@ -242,17 +268,37 @@ def train_single_run(args, seed, run_idx):
             x_c_aug, x_d_aug = x_c_aug.to(device), x_d_aug.to(device)
             sub_scores_gt = sub_scores_gt.to(device)
             
+            # 1. 正常的前向传播
             pred_score, pred_subs, proj_c, proj_d, feat_c, feat_d = model(x_c, x_d)
-            pred_score_aug, _, _, _, _, _ = model(x_c_aug, x_d_aug)
+            
+            # ============ [修改 START] SSL 计算逻辑 ============
+            loss_ssl = torch.tensor(0.0).to(device)
+            # 只有在开启 SSL 时，才计算增强数据的 Forward 和 Loss，节省计算资源
+            if current_enable_ssl:
+                pred_score_aug, _, _, _, _, _ = model(x_c_aug, x_d_aug)
+                loss_ssl = ssl_rank_crit(pred_score.view(-1), pred_score_aug.view(-1))
+            # ============ [修改 END] ============
             
             loss_mse = mse_crit(pred_score.view(-1), score)
             loss_rank = rank_crit(pred_score.view(-1), score)
-            loss_mi = model.mi_estimator(feat_c, feat_d)
-            loss_sub = mse_crit(pred_subs, sub_scores_gt) if args.use_subscores else torch.tensor(0.0).to(device)
-            loss_ssl = ssl_rank_crit(pred_score.view(-1), pred_score_aug.view(-1))
             
-            total_loss = loss_mse + args.lambda_rank * loss_rank + args.lambda_mi * loss_mi + \
-                         args.lambda_sub * loss_sub + args.lambda_ssl * loss_ssl
+            # Loss MI (解耦损失)
+            loss_mi = model.mi_estimator(feat_c, feat_d)
+            
+            # ============ [修改 START] 多任务 Loss 逻辑 ============
+            loss_sub = torch.tensor(0.0).to(device)
+            if current_use_subscores: # 使用动态变量判断
+                loss_sub = mse_crit(pred_subs, sub_scores_gt)
+            # ============ [修改 END] ============
+            
+            # ============ [修改 START] Total Loss 权重替换 ============
+            # 注意这里全部换成了 current_lambda_xxx
+            total_loss = loss_mse + \
+                         args.lambda_rank * loss_rank + \
+                         current_lambda_mi * loss_mi + \
+                         current_lambda_sub * loss_sub + \
+                         current_lambda_ssl * loss_ssl
+            # ============ [修改 END] ============
             
             optimizer.zero_grad()
             total_loss.backward()
@@ -331,6 +377,15 @@ def parse_args():
     parser.add_argument("--num_repeats", type=int, default=5)
     parser.add_argument("--experiment_name", type=str, default="exp_v1")
     
+    # 1. 消融自监督训练集构建 (Exp 1: w/o SSL Set)
+    parser.add_argument("--no_ssl", action="store_true", help="Disable Self-Supervised Learning module")
+    
+    # 2. 消融双流特征解耦 (Exp 2: w/o Decoupling)
+    parser.add_argument("--no_decouple", action="store_true", help="Disable Feature Decoupling (MI Loss)")
+    
+    # 3. 消融多任务联合优化 (Exp 3: w/o Multi-task)
+    parser.add_argument("--no_multitask", action="store_true", help="Disable Multi-task (Sub-scores)")
+    
     return parser.parse_args()
 
 def main():
@@ -386,4 +441,5 @@ def main():
         print(f"Summary saved to eval_results_repeated/{args.experiment_name}/final_summary.json")
 
 if __name__ == "__main__":
+
     main()

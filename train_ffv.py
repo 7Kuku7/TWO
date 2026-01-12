@@ -29,7 +29,7 @@ from models.dis_nerf_advanced import DisNeRFQA_Advanced
 from utils import calculate_srcc, calculate_plcc, calculate_krcc
 import consts_ffv as ffv_consts
 # 改
-from scipy.stats import spearmanr, pearsonr
+from scipy.stats import spearmanr, pearsonr, kendalltau
 
 # 占位符防止报错
 try:
@@ -247,6 +247,7 @@ def evaluate_by_subset(preds, targets, keys):
     # 用于收集所有场景的指标，最后计算 Overall Mean
     all_scene_srccs = []
     all_scene_plccs = []
+    all_scene_krccs = []
     all_scene_rmses = []
     
     subset_metrics = {}
@@ -272,6 +273,7 @@ def evaluate_by_subset(preds, targets, keys):
 
         scene_srccs = []
         scene_plccs = []
+        scene_krccs = []
         scene_rmses = []
         
         # --- 4. 逐场景计算指标 ---
@@ -299,6 +301,12 @@ def evaluate_by_subset(preds, targets, keys):
                 if np.isfinite(s_plcc): 
                     scene_plccs.append(s_plcc)
                     all_scene_plccs.append(s_plcc)
+
+                # --- 新增 KRCC 计算 ---
+                s_krcc = kendalltau(s_preds, s_targets)[0]
+                if np.isfinite(s_krcc):
+                    scene_krccs.append(s_krcc) # 记得在循环外初始化这个列表: scene_krccs = []
+                    all_scene_krccs.append(s_krcc) # 记得在函数开头初始化: all_scene_krccs = []
                 
                 # RMSE
                 s_rmse = np.sqrt(np.mean((s_preds - s_targets) ** 2))
@@ -313,7 +321,7 @@ def evaluate_by_subset(preds, targets, keys):
             subset_metrics[subset] = {
                 "srcc": np.mean(scene_srccs),
                 "plcc": np.mean(scene_plccs),
-                "krcc": 0.0, # 逐场景通常不汇报 KRCC，置0即可
+                "krcc": np.mean(scene_krccs), 
                 "rmse": np.mean(scene_rmses),
                 "count": count
             }
@@ -325,7 +333,7 @@ def evaluate_by_subset(preds, targets, keys):
     overall_metrics = {
         "srcc": np.mean(all_scene_srccs) if all_scene_srccs else 0.0,
         "plcc": np.mean(all_scene_plccs) if all_scene_plccs else 0.0,
-        "krcc": 0.0,
+        "krcc": np.mean(all_scene_krccs) if all_scene_krccs else 0.0,
         "rmse": np.mean(all_scene_rmses) if all_scene_rmses else 0.0
     }
     

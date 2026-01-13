@@ -534,11 +534,21 @@ def train_single_run(args, seed, run_idx):
             
             total_loss = loss_mse + args.lambda_rank * loss_rank + args.lambda_mi * loss_mi + \
                          args.lambda_sub * loss_sub + args.lambda_ssl * loss_ssl
+            # --- 【防线 1：NaN 熔断】(对应第三步) ---
+            # 如果 Loss 已经坏了，千万别 backward，直接跳过！
+            if torch.isnan(total_loss) or torch.isinf(total_loss):
+                print(f"Warning: NaN/Inf loss detected at Epoch {epoch}! Skipping batch...")
+                optimizer.zero_grad() 
+                continue 
             
+            # 如果 Loss 正常，才开始反向传播
             optimizer.zero_grad()
             total_loss.backward()
-            # 添加梯度裁剪防止梯度爆炸
+
+            # --- 【防线 2：梯度裁剪】(对应第二步) ---
+            # 就算 Loss 正常，梯度也可能太大，这里强制限制最大为 0.5
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
+            
             optimizer.step()
             
             if not args.no_wandb:
@@ -647,7 +657,7 @@ def parse_args():
     # 训练参数
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--num_frames", type=int, default=8, help="每个视频采样的帧数")
     
     # 损失权重 (与原代码一致)

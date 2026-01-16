@@ -48,7 +48,6 @@ class AdvancedOFNeRFDataset(OFNeRFDataset):
         content_input = self._apply_transform(frames_pil)
         
         # 为了可视化，Distortion Input 我们直接复用 Content Input (无 crop)
-        # 或者如果你想严格一致，可以保持原逻辑，这里简化处理
         distortion_input = content_input
             
         # 返回 key 用于解析场景和失真信息
@@ -57,9 +56,20 @@ class AdvancedOFNeRFDataset(OFNeRFDataset):
     def _load_frames_pil(self, folder_path):
         all_frames = sorted(list(folder_path.glob("frame_*.png")))
         if not all_frames: all_frames = sorted(list(folder_path.glob("frame_*.jpg")))
-        if not all_frames: raise ValueError(f"No frames found in {folder_path}")
+        if not all_frames: all_frames = sorted([f for f in folder_path.iterdir() if f.suffix.lower() in ['.png', '.jpg', '.jpeg']])
+        
+        if not all_frames: 
+            # 增加一个容错，防止某些空文件夹导致崩溃
+            print(f"Warning: No frames found in {folder_path}, skipping...")
+            # 返回全黑图像防止 DataLoader 崩溃 (根据你的数据情况，这里可能需要 raise error)
+            return [Image.new('RGB', (224, 224)) for _ in range(self.num_frames)]
+
         indices = torch.linspace(0, len(all_frames)-1, self.num_frames).long()
-        return [Image.open(all_frames[i]).convert('RGB') for p in indices]
+        
+        # [Fix] 之前的错误在于这里写成了 all_frames[i] 但循环变量是 p
+        # 正确写法：先选出路径，再 open
+        selected_paths = [all_frames[idx] for idx in indices]
+        return [Image.open(p).convert('RGB') for p in selected_paths]
 
     def _apply_transform(self, pil_list):
         t_imgs = []
@@ -76,12 +86,12 @@ def parse_info_from_key(key):
     你需要根据实际情况修改这里的逻辑！
     假设格式如: "lego_fog_level1" 或 "ship_blur_0"
     """
-    # [用户请注意]：这里需要根据你的实际文件名格式进行修改
-    # 示例逻辑：假设第一个下划线前是场景，中间是失真类型
+    # 简单的 heuristic 解析，建议根据实际情况调整
     parts = key.split('_')
     
     if len(parts) >= 2:
         scene = parts[0]       # 例如 lego
+        # 尝试猜测失真部分
         distortion = parts[1]  # 例如 fog
     else:
         scene = key
@@ -131,7 +141,11 @@ def extract_features(model, dataloader, device):
 # ==========================================
 def plot_tsne(features, labels, title, save_path, legend_title="Class", is_continuous=False):
     print(f"Running t-SNE for {title}...")
-    tsne = TSNE(n_components=2, random_state=42, perplexity=30, init='pca', learning_rate='auto')
+    # Perplexity 对于小数据集(36个样本)不能太大，通常设为 5-30 之间
+    n_samples = features.shape[0]
+    perp = min(30, n_samples - 1) if n_samples > 1 else 1
+    
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perp, init='pca', learning_rate='auto')
     tsne_results = tsne.fit_transform(features)
     
     plt.figure(figsize=(10, 8))
@@ -144,9 +158,8 @@ def plot_tsne(features, labels, title, save_path, legend_title="Class", is_conti
     else:
         # 如果是离散值 (如 Scene 名称)，用 seaborn
         unique_labels = np.unique(labels)
-        # 如果类别太多，图例会很乱，限制一下
         if len(unique_labels) > 20:
-            print(f"Warning: Too many labels ({len(unique_labels)}) for legend.")
+            print(f"Warning: Too many labels ({len(unique_labels)}) for legend. Showing plot without legend.")
             sns.scatterplot(x=tsne_results[:, 0], y=tsne_results[:, 1], 
                             hue=labels, palette="deep", alpha=0.7, legend=False)
         else:
@@ -219,14 +232,12 @@ def main():
               legend_title="Scene")
 
     # Plot B: Distortion Features (应该按 MOS 或 Distortion Type 聚类)
-    # 如果 distortion 名字不统一，用 MOS 着色可能效果更好
     plot_tsne(feat_d, mos, 
               title="Distortion Feature Space (Colored by MOS)", 
               save_path=os.path.join(args.save_dir, "tsne_distortion_mos.png"),
               legend_title="MOS", is_continuous=True)
     
     # Plot C: Distortion Features (Colored by Distortion Type)
-    # 只有当你的 distortion 标签比较干净时才有用
     plot_tsne(feat_d, distortions, 
               title="Distortion Feature Space (Colored by Type)", 
               save_path=os.path.join(args.save_dir, "tsne_distortion_type.png"),

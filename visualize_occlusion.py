@@ -16,22 +16,39 @@ from models.dis_nerf_advanced import DisNeRFQA_Advanced
 # 必须包含这个 Dataset wrapper 才能正确读取字典格式 MOS
 class AdvancedOFNeRFDataset(OFNeRFDataset):   
     def __init__(self, root_dir, mos_file, mode='train', transform=None, distortion_sampling=False, num_frames=8, use_subscores=False, enable_ssl=False):
+        # 显式调用父类初始化
         super().__init__(root_dir, mos_file, mode, transform, distortion_sampling, num_frames)
     
     def __getitem__(self, idx):
         # 简化版 getitem，只为获取数据
         folder_path = self.valid_samples[idx]
         key = self._get_key_from_path(folder_path)
-        entry = self.mos_labels[key]
-        score = entry['mos'] / 100.0 if isinstance(entry, dict) else entry / 100.0
+        
+        # 兼容字典格式的 MOS 标签
+        entry = self.mos_labels.get(key)
+        # 如果找不到 key，可能因为分割问题，尝试直接用 path.name
+        if entry is None:
+             entry = self.mos_labels.get(folder_path.name, 0.0)
+
+        if isinstance(entry, dict):
+            score = entry['mos'] / 100.0
+        else:
+            score = entry / 100.0
         
         frames_pil = self._load_frames_pil(folder_path)
         content_input = self._apply_transform(frames_pil)
+        
+        # Occlusion Map 需要 x_c 和 x_d
+        # 这里 x_d 我们也用 content_input (resize后的)，保持一致
         return content_input, content_input, torch.tensor(score), key
 
     def _load_frames_pil(self, folder_path):
         all_frames = sorted(list(folder_path.glob("frame_*.png")))
         if not all_frames: all_frames = sorted(list(folder_path.glob("frame_*.jpg")))
+        if not all_frames: 
+            # 容错：如果是空文件夹
+            return [Image.new('RGB', (224, 224)) for _ in range(self.num_frames)]
+            
         indices = torch.linspace(0, len(all_frames)-1, self.num_frames).long()
         return [Image.open(all_frames[i]).convert('RGB') for i in indices]
 
@@ -56,22 +73,21 @@ def generate_occlusion_map(model, x_c, x_d, device, patch_size=32, stride=16):
     counts = np.zeros((H, W))
     
     # 2. 滑动窗口遮挡
-    # 我们只遮挡 x_d (Distortion Input) 来查看哪些区域影响了质量判断
-    # x_c 保持不变，作为 Context
-    
-    print(f"Base Score: {base_score:.4f}. Running Occlusion Scan...")
+    print(f"Base Score: {base_score:.4f}. Running Occlusion Scan (Patch: {patch_size}, Stride: {stride})...")
     
     y_range = range(0, H - patch_size + 1, stride)
     x_range = range(0, W - patch_size + 1, stride)
     
-    total_steps = len(y_range) * len(x_range)
-    
+    # 为了进度条显示，先计算总步数
+    total_steps = len(list(y_range)) * len(list(x_range))
+    pbar = tqdm(total=total_steps, desc="Scanning", leave=False)
+
     with torch.no_grad():
-        for y in y_range:
-            for x in x_range:
+        for y in range(0, H - patch_size + 1, stride):
+            for x in range(0, W - patch_size + 1, stride):
                 # 创建遮挡副本
                 x_d_occ = x_d.clone()
-                # 将该区域设为 0 (黑色) 或 均值灰色
+                # 将该区域设为 0 (黑色)
                 x_d_occ[:, :, :, y:y+patch_size, x:x+patch_size] = 0.0 
                 
                 # 预测分数
@@ -79,22 +95,23 @@ def generate_occlusion_map(model, x_c, x_d, device, patch_size=32, stride=16):
                 diff = pred_score.item() - base_score
                 
                 # 逻辑：
-                # 如果遮挡后分数变高 (diff > 0)，说明遮住的是“坏东西”（伪影）。
-                # 如果遮挡后分数变低 (diff < 0)，说明遮住的是“好东西”（细节）。
-                # 我们主要想看伪影，所以关注 diff > 0 的区域。
+                # diff > 0: 遮挡后分数变高 -> 遮住了伪影 (Bad Region) -> 累加正值
+                # diff < 0: 遮挡后分数变低 -> 遮住了细节 (Good Region)
+                # 我们主要可视化伪影，但也保留负值以供参考
                 
                 heatmap[y:y+patch_size, x:x+patch_size] += diff
                 counts[y:y+patch_size, x:x+patch_size] += 1
+                pbar.update(1)
+    
+    pbar.close()
 
     # 平均化
     heatmap = heatmap / (counts + 1e-8)
     
-    # 归一化便于显示 (只取正值部分高亮伪影)
-    # heatmap = np.maximum(heatmap, 0) 
-    # 或者全范围归一化
-    heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap) + 1e-8)
+    # 归一化便于显示 (Min-Max Normalize)
+    heatmap_norm = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap) + 1e-8)
     
-    return heatmap, base_score
+    return heatmap_norm, base_score
 
 def main():
     parser = argparse.ArgumentParser()
@@ -103,13 +120,16 @@ def main():
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--save_dir", type=str, default="vis_results/occlusion")
     parser.add_argument("--gpu", type=str, default="0")
-    parser.add_argument("--target_name", type=str, required=True, help="Partial name of video to visualize")
+    parser.add_argument("--target_name", type=str, required=True, help="Partial name or Key of video to visualize")
+    # 增加 mode 参数，防止视频在 train 集里导致找不到
+    parser.add_argument("--mode", type=str, default="val", choices=['train', 'val', 'test'], help="Which split to search")
     
     args = parser.parse_args()
     os.makedirs(args.save_dir, exist_ok=True)
     device = torch.device(f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu")
     
     # Load Model
+    print(f"Loading Model from {args.checkpoint}...")
     model = DisNeRFQA_Advanced(num_subscores=4, use_fusion=True)
     state_dict = torch.load(args.checkpoint, map_location=device)
     new_state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
@@ -117,20 +137,32 @@ def main():
     model.to(device)
     
     # Load Dataset
+    print(f"Loading Dataset ({args.mode})...")
     transform = T.Compose([T.Resize((224, 224)), T.ToTensor(), T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    dataset = AdvancedOFNeRFDataset(args.root_dir, args.mos_file, mode='val', transform=transform, num_frames=8)
+    dataset = AdvancedOFNeRFDataset(args.root_dir, args.mos_file, mode=args.mode, transform=transform, num_frames=8)
     
     # Find Target
     target_idx = -1
+    print(f"Searching for '{args.target_name}' in {len(dataset)} samples...")
+    
     for i in range(len(dataset)):
         path_obj = dataset.valid_samples[i]
-        if args.target_name in str(path_obj):
+        
+        # 1. 检查 Key (Dataset 生成的 ID，例如 office+mipnerf...)
+        key = dataset._get_key_from_path(path_obj)
+        
+        # 2. 检查 Path String (文件路径，例如 office__mipnerf...)
+        path_str = str(path_obj)
+        
+        # 只要有一个匹配就行
+        if (args.target_name in key) or (args.target_name in path_str):
             target_idx = i
-            print(f"Found: {path_obj}")
+            print(f"Found match!\n  - Path: {path_obj}\n  - Key:  {key}")
             break
             
     if target_idx == -1:
-        print("Video not found.")
+        print(f"Error: Video '{args.target_name}' not found in {args.mode} set.")
+        print("Tip: If you are sure the video exists, try changing --mode to 'train' or 'test'.")
         return
 
     # Get Data
@@ -139,7 +171,6 @@ def main():
     x_d = x_d.unsqueeze(0).to(device)
     
     # Run Occlusion
-    print("Generating Occlusion Sensitivity Map (This may take a minute)...")
     heatmap, pred_score = generate_occlusion_map(model, x_c, x_d, device, patch_size=32, stride=8)
     
     # Visualization
@@ -164,9 +195,12 @@ def main():
     plt.title("Occlusion Sensitivity\n(Red = Area causing Quality Drop)")
     plt.axis('off')
     
-    safe_key = str(key).replace('/', '_')
-    plt.savefig(os.path.join(args.save_dir, f"{safe_key}_occlusion.png"), bbox_inches='tight')
-    print("Done.")
+    # 保存结果
+    safe_key = str(key).replace('/', '_').replace('\\', '_').replace('+', '_')
+    save_path = os.path.join(args.save_dir, f"{safe_key}_occlusion.png")
+    plt.savefig(save_path, bbox_inches='tight')
+    plt.close()
+    print(f"Done. Saved to {save_path}")
 
 if __name__ == "__main__":
     main()

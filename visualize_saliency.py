@@ -8,11 +8,89 @@ import matplotlib.pyplot as plt
 import cv2
 import argparse
 import os
-from PIL import Image
+import random
+from PIL import Image, ImageFilter
 
-# --- 引入依赖 (保持和你项目一致) ---
+# --- 引入依赖 ---
 from datasets.of_nerf import OFNeRFDataset
 from models.dis_nerf_advanced import DisNeRFQA_Advanced
+
+# ==========================================
+# 0. 必要的辅助类 (从 train_final.py 复制以解决报错)
+# ==========================================
+class SelfSupervisedAugmentor:
+    def __init__(self):
+        self.photo_jitter = T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1)
+        
+    def __call__(self, frames):
+        # 推理阶段不需要增强，直接返回即可，但保留接口防止报错
+        return frames
+
+class AdvancedOFNeRFDataset(OFNeRFDataset):   
+    """
+    为了兼容 mos_advanced.json (字典格式标签) 而重写的 Dataset
+    """
+    def __init__(self, root_dir, mos_file, mode='train', transform=None, distortion_sampling=False, num_frames=8, use_subscores=False, enable_ssl=False):
+        super().__init__(root_dir, mos_file, mode, transform, distortion_sampling, num_frames)
+        self.mode = mode
+        self.use_subscores = use_subscores
+        self.enable_ssl = enable_ssl
+        self.augmentor = SelfSupervisedAugmentor()
+
+    def __getitem__(self, idx):
+        folder_path = self.valid_samples[idx]
+        key = self._get_key_from_path(folder_path)
+        
+        # [Fix] 正确解析字典格式的 MOS
+        entry = self.mos_labels[key]
+        if isinstance(entry, dict):
+            score = entry['mos'] / 100.0
+            sub_data = entry.get('sub_scores', {})
+        else:
+            score = entry / 100.0
+            sub_data = {}
+        
+        score_tensor = torch.tensor(score, dtype=torch.float32)
+        sub_scores_tensor = torch.zeros(4, dtype=torch.float32)
+        if self.use_subscores:
+            sub_scores_tensor = torch.tensor([
+                sub_data.get("discomfort", 0), sub_data.get("blur", 0),
+                sub_data.get("lighting", 0), sub_data.get("artifacts", 0)
+            ], dtype=torch.float32) / 5.0
+        
+        frames_pil = self._load_frames_pil(folder_path)
+        
+        # 验证/测试模式不做增强
+        frames_aug_pil = frames_pil
+        
+        content_input = self._apply_transform(frames_pil)
+        content_input_aug = self._apply_transform(frames_aug_pil)
+
+        # 验证模式不使用 Grid Sampling，直接全图或Resize
+        distortion_input = content_input
+        distortion_input_aug = content_input_aug
+            
+        return content_input, distortion_input, score_tensor, sub_scores_tensor, key, content_input_aug, distortion_input_aug
+
+    def _load_frames_pil(self, folder_path):
+        all_frames = sorted(list(folder_path.glob("frame_*.png")))
+        if not all_frames: all_frames = sorted(list(folder_path.glob("frame_*.jpg")))
+        if not all_frames: all_frames = sorted([f for f in folder_path.iterdir() if f.suffix.lower() in ['.png', '.jpg', '.jpeg']])
+        
+        if not all_frames:
+             # 容错处理
+             return [Image.new('RGB', (224, 224)) for _ in range(self.num_frames)]
+
+        indices = torch.linspace(0, len(all_frames)-1, self.num_frames).long()
+        selected_frames = [all_frames[i] for i in indices]
+        return [Image.open(p).convert('RGB') for p in selected_frames]
+
+    def _apply_transform(self, pil_list):
+        t_imgs = []
+        for img in pil_list:
+            t_imgs.append(self.transform(img) if self.transform else T.ToTensor()(img))
+        return torch.stack(t_imgs)
+
 
 # ==========================================
 # 1. Grad-CAM 核心工具类
@@ -28,74 +106,51 @@ class GradCAM:
         self.gradients = grad
 
     def save_activation(self, module, input, output):
-        # output is the activation
         self.activations = output
 
     def __call__(self, x_c, x_d, frame_idx=0):
-        """
-        计算特定帧的 Grad-CAM
-        frame_idx: 想要可视化这一组输入中的第几帧 (0~T-1)
-        """
         # 1. Forward Pass
-        # 我们需要保留梯度，所以 model 必须在 train 模式或者开启 requires_grad
-        # 但通常 eval 模式下手动开启 input 的 grad 也可以，这里为了简单用 eval + set_grad_enabled
-        
-        # 这里的 output 是最终的 score
         score, _, _, _, _, _ = self.model(x_c, x_d)
         
         # 2. Backward Pass
         self.model.zero_grad()
-        # 我们只关心我们选定的那一帧对分数的贡献，但由于模型是时序平均的，
-        # 对 score 求导会自动分发到所有帧。
         score.backward() 
 
         # 3. Get Gradients and Activations
-        # Shapes: [B*T, C, H, W] (for CNN) or [B*T, H, W, C] (Swin) or [B*T, N, C] (ViT)
         grads = self.gradients
         acts = self.activations
         
-        # 提取特定帧的数据 (假设 Batch Size = 1)
-        # 输入 x_c 是 [1, T, C, H, W]，经过 encoder 后变成 [T, ...]
-        # 所以直接按索引取
-        grad = grads[frame_idx].unsqueeze(0) # [1, ...]
-        act = acts[frame_idx].unsqueeze(0)   # [1, ...]
+        if grads is None or acts is None:
+            print("Error: No gradients or activations captured. Check hooks.")
+            return np.zeros((224, 224))
+
+        grad = grads[frame_idx].unsqueeze(0) 
+        act = acts[frame_idx].unsqueeze(0)
         
         # 4. Generate CAM
         if self.target_layer_type == 'swin':
-            # Swin Output: [1, H, W, C] usually in timm
-            # Check shape
-            if grad.shape[-1] != act.shape[-1]: # If format matches [1, C, H, W]
+            if grad.shape[-1] != act.shape[-1]: 
                  weights = torch.mean(grad, dim=(2, 3), keepdim=True)
                  cam = torch.sum(weights * act, dim=1)
-            else: # Format [1, H, W, C]
-                 weights = torch.mean(grad, dim=(1, 2), keepdim=True) # Pool spatial [1, 1, 1, C]
-                 cam = torch.sum(weights * act, dim=-1) # [1, H, W]
+            else: 
+                 weights = torch.mean(grad, dim=(1, 2), keepdim=True)
+                 cam = torch.sum(weights * act, dim=-1)
 
         elif self.target_layer_type == 'vit':
-            # ViT Output: [1, N, C]. N = H*W + 1 (CLS) or just H*W
-            # Remove CLS token if present
             num_tokens = act.shape[1]
             grid_size = int(np.sqrt(num_tokens)) 
             if grid_size * grid_size != num_tokens:
-                # Assuming first token is CLS
                 grad = grad[:, 1:, :]
                 act = act[:, 1:, :]
                 grid_size = int(np.sqrt(num_tokens - 1))
             
-            # Reshape to spatial: [1, H, W, C]
             grad = grad.reshape(1, grid_size, grid_size, -1)
             act = act.reshape(1, grid_size, grid_size, -1)
             
             weights = torch.mean(grad, dim=(1, 2), keepdim=True)
-            cam = torch.sum(weights * act, dim=-1) # [1, H, W]
+            cam = torch.sum(weights * act, dim=-1)
 
-        # 5. Post-process (ReLU + Normalize)
-        cam = F.relu(cam) # 只看正贡献 (对于分数回归，正贡献=提高分数的区域；或者你可以去掉relu看绝对值)
-        # 注意：如果是低分视频，我们可能想看“导致低分”的区域，这时候梯度可能是负的。
-        # 建议：可视化 abs(cam) 或者 invert gradients。
-        # 简单起见，标准的 Grad-CAM 用 ReLU，表示"Supportive Regions"。
-        # 为了看到失真（通常拉低分数），我们可以尝试 score.backward(gradient=torch.tensor(-1.0)) 
-        # 但通常直接看 ReLU 也能看到高亮区域，因为模型会聚焦在失真处进行判决。
+        cam = F.relu(cam)
         
         cam = cam.detach().cpu().numpy()[0]
         cam = cv2.resize(cam, (224, 224))
@@ -110,18 +165,26 @@ def register_hooks(model, cam_obj, target_type):
     target_layer = None
     
     if target_type == 'swin':
-        # Swin-Tiny: 通常最后一层在 model.layers[-1].blocks[-1]
-        # 需要根据 timm 版本微调，这里是通用猜测
-        # DisNeRF 中的 distortion_encoder 是 Swin
-        target_layer = model.distortion_encoder.layers[-1].blocks[-1].norm1
+        # Swin-Tiny: 尝试定位最后的 norm 层
+        # 常见路径: model.layers[-1].blocks[-1].norm1
+        try:
+            target_layer = model.distortion_encoder.layers[-1].blocks[-1].norm1
+        except:
+            print("Warning: Could not find Swin target layer at default path. Trying alternative...")
+            # 备用方案：打印结构并手动调整，或者使用 named_modules 搜索
+            pass
+            
     elif target_type == 'vit':
         # ViT-Base: model.blocks[-1].norm1
-        target_layer = model.content_encoder.blocks[-1].norm1
+        try:
+            target_layer = model.content_encoder.blocks[-1].norm1
+        except:
+            pass
         
     if target_layer is None:
-        raise ValueError(f"Could not find target layer for {target_type}")
+        print(f"Error: Could not find target layer for {target_type}. Visualization might fail.")
+        return
 
-    # Register hooks
     def forward_hook(module, input, output):
         cam_obj.save_activation(module, input, output)
         
@@ -137,38 +200,39 @@ def register_hooks(model, cam_obj, target_type):
 # ==========================================
 def visualize_sample(model, dataset, index, output_dir, device):
     # 1. 获取数据
+    # 现在使用的是 AdvancedOFNeRFDataset，返回 tuple 长度为 7，解包正确
     x_c, x_d, score_gt, _, key, _, _ = dataset[index]
-    x_c = x_c.unsqueeze(0).to(device).requires_grad_(True) # [1, T, C, H, W]
+    x_c = x_c.unsqueeze(0).to(device).requires_grad_(True)
     x_d = x_d.unsqueeze(0).to(device).requires_grad_(True)
     
-    # 获取原始图片 (用于叠加) - 取第0帧
-    # Dataset 里做了 Normalize，我们需要反归一化方便显示
-    frame_tensor = x_c[0, 0].detach().cpu() # [C, H, W]
+    # 获取原始图片
+    frame_tensor = x_c[0, 0].detach().cpu()
     mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
     std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
     img_vis = frame_tensor * std + mean
     img_vis = img_vis.permute(1, 2, 0).clamp(0, 1).numpy()
-    img_vis = (img_vis * 255).astype(np.uint8) # [224, 224, 3]
+    img_vis = (img_vis * 255).astype(np.uint8)
 
     # 2. 初始化 CAM
     cam_swin = GradCAM(model, 'swin')
     cam_vit = GradCAM(model, 'vit')
     
-    # 注册 Hooks (注意：由于是同一个模型，我们需要分别运行两次 forward/backward 或者很小心地清除 hooks)
-    # 简单策略：运行两次
-    
     # --- Run for Distortion (Swin) ---
+    # 我们重新加载模型以清除 hooks 状态，或者简单点：分别运行
+    # 这里采用重新注册的方式
+    
     register_hooks(model, cam_swin, 'swin')
     heatmap_d = cam_swin(x_c, x_d, frame_idx=0)
     
-    # 清理 hooks 比较麻烦，重新加载模型或者简单的 hack: 
-    # 我们这里假设只运行一次 visualize_sample，或者在这里重新实例化模型比较安全，
-    # 但为了效率，我们可以在 GradCAM 里仅在 call 时临时 register。
-    # (上面的代码为了演示简单，直接注册了。实际运行建议分别跑)
+    # 清除之前的 hooks 比较麻烦，这里我们利用 python 的机制，
+    # 再次注册新的 hooks 到另一个 cam 对象。
+    # 为了避免干扰，最好是分别运行。但只要 backward 都能触发就行。
     
-    # --- Run for Content (ViT) ---
-    # 由于 Hook 已经注册在 Swin 上了，我们再注册一个到 ViT
-    # 此时 backward 会同时触发两个 hooks，没问题，因为它们存到不同的 cam 对象里
+    # 注意：为了让 ViT 也能捕捉到梯度，我们需要再次 zero_grad 并 backward
+    # 但上面的 cam_swin 已经做了一次 backward。
+    # 我们可以复用 score，或者再跑一次 forward。
+    # 简单起见：再跑一次 forward
+    
     register_hooks(model, cam_vit, 'vit')
     heatmap_c = cam_vit(x_c, x_d, frame_idx=0)
 
@@ -193,15 +257,17 @@ def visualize_sample(model, dataset, index, output_dir, device):
     
     plt.subplot(1, 3, 2)
     plt.imshow(vis_d)
-    plt.title("Distortion Attention (Swin)\n(Should highlight Artifacts)")
+    plt.title("Distortion Attention (Swin)")
     plt.axis('off')
     
     plt.subplot(1, 3, 3)
     plt.imshow(vis_c)
-    plt.title("Content Attention (ViT)\n(Should highlight Objects)")
+    plt.title("Content Attention (ViT)")
     plt.axis('off')
     
-    save_path = os.path.join(output_dir, f"{key}_vis.png")
+    # 清理 key 里的路径符号，防止保存出错
+    safe_key = str(key).replace('/', '_').replace('\\', '_')
+    save_path = os.path.join(output_dir, f"{safe_key}_index{index}.png")
     plt.savefig(save_path, bbox_inches='tight', dpi=150)
     plt.close()
     print(f"Saved visualization to {save_path}")
@@ -217,24 +283,36 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="vis_results/saliency")
     parser.add_argument("--gpu", type=str, default="0")
     parser.add_argument("--sample_idx", type=int, default=0, help="Index of sample to visualize")
+    parser.add_argument("--target_name", type=str, default=None, help="Name search (Optional)")
+    
     args = parser.parse_args()
     
     os.makedirs(args.save_dir, exist_ok=True)
     device = torch.device(f"cuda:{args.gpu}" if torch.cuda.is_available() else "cpu")
     
-    # Load Data & Model
+    print("Loading dataset...")
     transform = T.Compose([T.Resize((224, 224)), T.ToTensor(), T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    dataset = OFNeRFDataset(args.root_dir, args.mos_file, mode='val', transform=transform, num_frames=8) # 确保 num_frames 一致
+    
+    # [Fix] 使用 AdvancedOFNeRFDataset 而不是 OFNeRFDataset
+    dataset = AdvancedOFNeRFDataset(args.root_dir, args.mos_file, mode='val', transform=transform, num_frames=8)
     
     model = DisNeRFQA_Advanced(num_subscores=4, use_fusion=True)
     state_dict = torch.load(args.checkpoint, map_location=device)
     new_state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
     model.load_state_dict(new_state_dict)
     model.to(device)
-    model.eval() # Eval mode, but we will manually enable gradients for input if needed, though here we use backward on score.
+    model.eval()
 
-    # 选择几个样本进行可视化
-    # 建议手动挑选：一个低分(伪影多)，一个高分(清晰)
-    # 这里默认跑参数指定的 sample_idx
-    print(f"Visualizing sample index: {args.sample_idx}")
-    visualize_sample(model, dataset, args.sample_idx, args.save_dir, device)
+    # 处理索引查找 (保留了 Name Search 功能，方便你以后用)
+    target_idx = args.sample_idx
+    if args.target_name is not None:
+        print(f"Searching for video containing: '{args.target_name}'...")
+        for i in range(len(dataset)):
+            path_obj = dataset.valid_samples[i]
+            if args.target_name in str(path_obj):
+                target_idx = i
+                print(f"Found match at Index {i}: {path_obj}")
+                break
+
+    print(f"Visualizing sample index: {target_idx}")
+    visualize_sample(model, dataset, target_idx, args.save_dir, device)

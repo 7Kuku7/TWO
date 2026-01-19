@@ -1,0 +1,195 @@
+{
+    "run_info": {
+        "run_index": 2,
+        "seed": 3407,
+        "best_epoch": 27
+    },
+    "metrics": {
+        "SRCC": 0.9745173745173745,
+        "PLCC": 0.9711659094051703,
+        "KRCC": 0.8761904761904762,
+        "RMSE": 6.0789337158203125
+    },
+    "per_video_results": [
+        {
+            "video_name": "LiZhaoJi_Building+tensorf+baseline+path1",
+            "predicted_mos": 47.07854092121124,
+            "ground_truth_mos": 45.66666781902313
+        },
+        {
+            "video_name": "office_view2+mipnerf+baseline+path2",
+            "predicted_mos": 27.666574716567993,
+            "ground_truth_mos": 19.361111521720886
+        },
+        {
+            "video_name": "Architecture+nerfacto+clip_2.5+path2",
+            "predicted_mos": 66.4077877998352,
+            "ground_truth_mos": 64.27778005599976
+        },
+        {
+            "video_name": "LiZhaoJi_Building+nerf+baseline+path2",
+            "predicted_mos": 29.77871298789978,
+            "ground_truth_mos": 22.083333134651184
+        },
+        {
+            "video_name": "apartment+nerfacto+baseline+path1",
+            "predicted_mos": 73.14350605010986,
+            "ground_truth_mos": 72.05555438995361
+        },
+        {
+            "video_name": "Sqaure1+tensorf+baseline+path2",
+            "predicted_mos": 27.680674195289612,
+            "ground_truth_mos": 27.166667580604553
+        },
+        {
+            "video_name": "Architecture+tensorf+baseline+path1",
+            "predicted_mos": 35.73073744773865,
+            "ground_truth_mos": 29.555556178092957
+        },
+        {
+            "video_name": "office1b+instant-ngp+baseline+path1",
+            "predicted_mos": 67.7276611328125,
+            "ground_truth_mos": 71.30555510520935
+        },
+        {
+            "video_name": "Center_Garden+mipnerf+baseline+path2",
+            "predicted_mos": 33.70982110500336,
+            "ground_truth_mos": 32.22222328186035
+        },
+        {
+            "video_name": "office1b+tensorf+baseline+path2",
+            "predicted_mos": 54.88466024398804,
+            "ground_truth_mos": 55.1111102104187
+        },
+        {
+            "video_name": "Architecture+nerf+baseline+path2",
+            "predicted_mos": 23.587098717689514,
+            "ground_truth_mos": 31.999999284744263
+        },
+        {
+            "video_name": "Sqaure1+instant-ngp+baseline+path2",
+            "predicted_mos": 27.139812707901,
+            "ground_truth_mos": 16.527777910232544
+        },
+        {
+            "video_name": "apartment+mipnerf+baseline+path1",
+            "predicted_mos": 44.610726833343506,
+            "ground_truth_mos": 41.88888967037201
+        },
+        {
+            "video_name": "apartment+nerf+baseline+path2",
+            "predicted_mos": 40.22068679332733,
+            "ground_truth_mos": 40.25000035762787
+        },
+        {
+            "video_name": "Architecture+tensorf+clip_1.5+path2",
+            "predicted_mos": 31.884419918060303,
+            "ground_truth_mos": 26.527777314186096
+        },
+        {
+            "video_name": "office1b+instant-ngp+baseline+path2",
+            "predicted_mos": 78.74428033828735,
+            "ground_truth_mos": 82.0555567741394
+        },
+        {
+            "video_name": "riverview+nerfacto+baseline+path1",
+            "predicted_mos": 74.06628131866455,
+            "ground_truth_mos": 79.75000143051147
+        },
+        {
+            "video_name": "riverview+tensorf+baseline+path1",
+            "predicted_mos": 38.94050121307373,
+            "ground_truth_mos": 40.611112117767334
+        },
+        {
+            "video_name": "apartment+instant-ngp+baseline+path1",
+            "predicted_mos": 75.59245824813843,
+            "ground_truth_mos": 81.74999952316284
+        },
+        {
+            "video_name": "riverview+nerf+baseline+path2",
+            "predicted_mos": 30.797922611236572,
+            "ground_truth_mos": 38.47222328186035
+        },
+        {
+            "video_name": "LiZhaoJi_Building+instant-ngp+baseline+path2",
+            "predicted_mos": 59.867215156555176,
+            "ground_truth_mos": 59.805554151535034
+        },
+        {
+            "video_name": "raf_furnishedroom+tensorf+baseline+path2",
+            "predicted_mos": 68.14736127853394,
+            "ground_truth_mos": 61.222219467163086
+        },
+        {
+            "video_name": "apartment+instant-ngp+baseline+path2",
+            "predicted_mos": 86.57008409500122,
+            "ground_truth_mos": 91.13888740539551
+        },
+        {
+            "video_name": "riverview+nerfacto+clip_0.7+path1",
+            "predicted_mos": 67.74227023124695,
+            "ground_truth_mos": 76.02777481079102
+        },
+        {
+            "video_name": "LiZhaoJi_Building+instant-ngp+clip_0.4+path1",
+            "predicted_mos": 23.198723793029785,
+            "ground_truth_mos": 14.472222328186035
+        },
+        {
+            "video_name": "Architecture+instant-ngp+baseline+path2",
+            "predicted_mos": 42.66981482505798,
+            "ground_truth_mos": 44.83333230018616
+        },
+        {
+            "video_name": "Sqaure1+nerf+baseline+path2",
+            "predicted_mos": 28.100699186325073,
+            "ground_truth_mos": 26.1944442987442
+        },
+        {
+            "video_name": "raf_furnishedroom+nerfacto+baseline+path1",
+            "predicted_mos": 84.84065532684326,
+            "ground_truth_mos": 84.86111164093018
+        },
+        {
+            "video_name": "office1b+nerfacto+gamma_0.6+path1",
+            "predicted_mos": 77.2897720336914,
+            "ground_truth_mos": 77.33333110809326
+        },
+        {
+            "video_name": "LiZhaoJi_Building+nerfacto+gamma_0.6+path1",
+            "predicted_mos": 73.31284284591675,
+            "ground_truth_mos": 80.33333420753479
+        },
+        {
+            "video_name": "office1b+nerf+baseline+path2",
+            "predicted_mos": 16.84737801551819,
+            "ground_truth_mos": 17.638888955116272
+        },
+        {
+            "video_name": "riverview+nerfacto+gamma_0.6+path1",
+            "predicted_mos": 62.59129047393799,
+            "ground_truth_mos": 59.388887882232666
+        },
+        {
+            "video_name": "LiZhaoJi_Building+nerfacto+baseline+path1",
+            "predicted_mos": 77.15801000595093,
+            "ground_truth_mos": 89.33333158493042
+        },
+        {
+            "video_name": "office_view2+tensorf+baseline+path2",
+            "predicted_mos": 51.395249366760254,
+            "ground_truth_mos": 49.666666984558105
+        },
+        {
+            "video_name": "riverview+tensorf+clip_2.5+path1",
+            "predicted_mos": 62.570720911026,
+            "ground_truth_mos": 48.91666769981384
+        },
+        {
+            "video_name": "riverview+instant-ngp+baseline+path1",
+            "predicted_mos": 64.3150806427002,
+            "ground_truth_mos": 76.9166648387909
+        }
+    ]
+}

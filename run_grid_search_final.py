@@ -37,5 +37,13 @@ for i, values in enumerate(combinations):
     # 先跑 1 次重复快速验证
     cmd = f"{base_cmd} {flags} --num_repeats 1"
     
-    print(f"\n[{i+1}/{len(combinations)}] {exp_name}")
-    # os.system(cmd) # 取消注释来运行
+    print(f"\n[{i+1}/{len(combinations)}] 正在运行: {exp_name}")
+    # print(f"Command: {cmd}")
+    
+    # === 关键修正：这里去掉了注释，现在会真正执行了 ===
+    exit_code = os.system(cmd)
+    
+    if exit_code != 0:
+        print(f"❌ {exp_name} 运行出错！退出码: {exit_code}")
+
+print("\n🎉 所有搜参实验结束！请去 eval_results_repeated 文件夹查看各组的 best.json。")
